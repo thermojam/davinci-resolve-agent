@@ -102,5 +102,83 @@ class ConsoleToolTests(unittest.TestCase):
             module.make_command(Path(tempfile.gettempdir()) / "missing-task.py")
 
 
+class DeliveryValidationTests(unittest.TestCase):
+    def setUp(self):
+        self.module = load_script("validate_delivery")
+        self.profile = {
+            "verified_at": "2026-07-01",
+            "source_urls": ["https://example.com/official-spec"],
+            "orientation": "portrait",
+            "width": 1080,
+            "height": 1920,
+            "frame_rate": 25,
+            "min_duration": 1.0,
+            "max_duration": 30.0,
+            "video_codecs": ["h264"],
+            "audio_codecs": ["aac"],
+            "audio_channels": 2,
+            "audio_sample_rate": 48000,
+            "max_file_size": 10_000_000,
+        }
+        self.probe = {
+            "width": 1080,
+            "height": 1920,
+            "frame_rate": 25.0,
+            "duration": 20.0,
+            "video_codec": "h264",
+            "audio_codec": "aac",
+            "audio_channels": 2,
+            "audio_sample_rate": 48000,
+        }
+
+    def test_orientation_detects_landscape_portrait_and_square(self):
+        self.assertEqual(self.module.orientation(1920, 1080), "landscape")
+        self.assertEqual(self.module.orientation(1080, 1920), "portrait")
+        self.assertEqual(self.module.orientation(1080, 1080), "square")
+
+    def test_valid_probe_matches_profile(self):
+        self.assertEqual(
+            self.module.validate_probe(self.profile, self.probe, file_size=9_000_000),
+            [],
+        )
+
+    def test_portrait_profile_rejects_landscape_render(self):
+        probe = {**self.probe, "width": 1920, "height": 1080}
+        errors = self.module.validate_probe(self.profile, probe)
+        joined = " ".join(errors)
+        self.assertIn("orientation", joined)
+        self.assertIn("dimensions", joined)
+
+    def test_validator_reports_media_and_limit_mismatches(self):
+        probe = {
+            **self.probe,
+            "frame_rate": 30.0,
+            "duration": 31.0,
+            "video_codec": "hevc",
+            "audio_codec": "pcm_s24le",
+            "audio_channels": 1,
+            "audio_sample_rate": 44100,
+        }
+        errors = self.module.validate_probe(self.profile, probe, file_size=10_000_001)
+        joined = " ".join(errors)
+        for phrase in (
+            "frame rate",
+            "duration",
+            "video codec",
+            "audio codec",
+            "audio channels",
+            "audio sample rate",
+            "file size",
+        ):
+            self.assertIn(phrase, joined)
+
+    def test_profile_requires_provenance_and_geometry(self):
+        for key in ("verified_at", "source_urls", "orientation", "width", "height"):
+            profile = {**self.profile}
+            profile.pop(key)
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                self.module.validate_probe(profile, self.probe)
+
+
 if __name__ == "__main__":
     unittest.main()
