@@ -1,4 +1,5 @@
 import importlib.util
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -178,6 +179,60 @@ class DeliveryValidationTests(unittest.TestCase):
             profile.pop(key)
             with self.subTest(key=key), self.assertRaises(ValueError):
                 self.module.validate_probe(profile, self.probe)
+
+
+class ReferenceAndTemplateTests(unittest.TestCase):
+    def test_task_template_compiles_and_requires_injected_resolve(self):
+        path = SKILL_DIR / "assets" / "resolve_task_template.py"
+        text = path.read_text(encoding="utf-8")
+        compile(text, str(path), "exec")
+        self.assertIn('globals().get("resolve")', text)
+        self.assertIn("embedded Py3 Console", text)
+        self.assertIn("NotImplementedError", text)
+        self.assertNotIn('scriptapp("Resolve")', text)
+        self.assertIn("/opt/homebrew/bin", text)
+
+    def test_console_reference_records_verified_failure_modes(self):
+        text = (SKILL_DIR / "references" / "console-api.md").read_text(
+            encoding="utf-8"
+        )
+        for phrase in (
+            "No such file or directory: 'ffprobe'",
+            "No module named 'DaVinciResolveScript'",
+            "external scripting is disabled",
+            "undocumented project settings",
+            "unsaved current project",
+        ):
+            self.assertIn(phrase, text)
+        self.assertIn(
+            "/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting/README.txt",
+            text,
+        )
+
+    def test_best_practices_use_official_blackmagic_sources(self):
+        text = (SKILL_DIR / "references" / "best-practices.md").read_text(
+            encoding="utf-8"
+        )
+        urls = re.findall(r"https://[^)\s]+", text)
+        self.assertGreaterEqual(len(urls), 2)
+        self.assertTrue(all("blackmagicdesign.com" in url for url in urls))
+        for phrase in ("Edit", "Color", "Fairlight", "Fusion", "Deliver"):
+            self.assertIn(phrase, text)
+
+    def test_delivery_reference_requires_dated_service_placement_profile(self):
+        text = (SKILL_DIR / "references" / "delivery-profiles.md").read_text(
+            encoding="utf-8"
+        )
+        for phrase in (
+            "service",
+            "placement",
+            "verified_at",
+            "source_urls",
+            "orientation",
+            "validate_delivery.py",
+        ):
+            self.assertIn(phrase, text)
+        self.assertIn("Do not treat platform specifications as timeless", text)
 
 
 if __name__ == "__main__":
