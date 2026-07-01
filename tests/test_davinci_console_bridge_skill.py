@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
+README = ROOT / "README.md"
 SKILL_DIR = ROOT / "skills" / "davinci-console-bridge"
 SKILL = SKILL_DIR / "SKILL.md"
 OPENAI_YAML = SKILL_DIR / "agents" / "openai.yaml"
@@ -21,6 +22,20 @@ def load_script(name):
 
 
 class SkillContractTests(unittest.TestCase):
+    def test_readme_guides_new_users_through_safe_resolve_workflow(self):
+        self.assertTrue(README.exists(), "README.md is missing")
+        text = README.read_text(encoding="utf-8")
+        for phrase in (
+            "$davinci-console-bridge",
+            "Установка",
+            "Workspace > Console > Py3",
+            "подтверждения плана",
+            "ориентац",
+            "экспорт",
+            "Типовые ошибки",
+        ):
+            self.assertIn(phrase, text)
+
     def test_skill_declares_public_name_and_required_gates(self):
         text = SKILL.read_text(encoding="utf-8")
         self.assertIn("name: davinci-console-bridge", text)
