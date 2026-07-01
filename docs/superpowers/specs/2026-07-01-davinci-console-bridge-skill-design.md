@@ -14,8 +14,10 @@ The skill contains:
 - `agents/openai.yaml` with discovery metadata;
 - `scripts/check_environment.py` for read-only environment and target-script checks;
 - `scripts/make_console_command.py` for generating the exact Py3 Console command;
+- `scripts/validate_delivery.py` for comparing a rendered file with the approved delivery profile;
 - `assets/resolve_task_template.py` as a self-contained starting point for new Resolve tasks;
 - `references/best-practices.md` for official Blackmagic training and delivery guidance;
+- `references/delivery-profiles.md` for selecting and documenting service-specific requirements;
 - `references/console-api.md` for the locally verified Resolve Free scripting constraints and error diagnostics.
 
 ## Trigger and intake
@@ -31,8 +33,9 @@ On every new production task, ask one concise question at a time until the appli
 5. Reference videos or stills and the exact qualities to reproduce without copying protected material.
 6. Timeline requirements: resolution, aspect ratio, frame rate, color space, and audio sample rate.
 7. Editing requirements: pacing, transitions, titles, graphics, color, sound design, and music rights.
-8. Delivery requirements: container, codecs, bitrate or quality target, audio layout, file name, project archive, and deadlines.
-9. Whether Codex may create or replace a project with the requested name and start rendering.
+8. Destination service and placement: for example YouTube video or Shorts, Instagram Reel, Story or feed, TikTok, VK Video or Clips, Telegram, website, broadcast, or a custom master.
+9. Delivery requirements: display orientation, aspect ratio, resolution, duration limits, safe areas, container, codecs, frame rate, bitrate or quality target, audio layout, maximum file size, file name, project archive, and deadlines.
+10. Whether Codex may create or replace a project with the requested name and start rendering.
 
 Mark irrelevant fields explicitly as not applicable. Do not silently invent missing creative or technical decisions.
 
@@ -41,10 +44,12 @@ Mark irrelevant fields explicitly as not applicable. Do not silently invent miss
 1. **Brief gate:** Do not create files or change Resolve until the intake is complete.
 2. **Evidence gate:** Inspect sources with read-only tools and verify Resolve/API/tool availability.
 3. **Best-practice gate:** Select only the relevant official Blackmagic guidance for Edit, Color, Fairlight, Fusion, or Deliver.
-4. **Plan gate:** Write a concrete edit and implementation plan with success criteria, output paths, and rollback behavior.
-5. **Approval gate:** Obtain user approval before project mutation or rendering.
-6. **Execution gate:** Generate a task script and run it from Resolve's embedded Py3 Console.
-7. **Verification gate:** Verify the project/timeline and probe rendered media before claiming completion.
+4. **Delivery-profile gate:** Verify the current official requirements for the selected service and placement. Record the source URL and verification date. If the service does not publish a required value, label the chosen value as a production decision rather than an official requirement.
+5. **Geometry gate:** Confirm that source interpretation, timeline orientation, aspect ratio, resolution, safe areas, and render dimensions match the approved delivery profile.
+6. **Plan gate:** Write a concrete edit and implementation plan with success criteria, output paths, delivery profile, and rollback behavior.
+7. **Approval gate:** Obtain user approval before project mutation or rendering.
+8. **Execution gate:** Generate a task script and run it from Resolve's embedded Py3 Console.
+9. **Verification gate:** Verify the project/timeline and probe rendered media against the delivery profile before claiming completion.
 
 ## Verified connection architecture
 
@@ -79,6 +84,20 @@ Prefer primary sources:
 
 The reference must translate these sources into a short task checklist: organize media before editing, lock timeline specifications before import, preserve source frame-rate intent, use restrained transitions, manage color consistently, preserve dialogue headroom, verify legal music usage, and validate the final deliverable with media probing.
 
+## Service-specific delivery profiles
+
+Do not hardcode social-platform specifications as timeless facts. Requirements and accepted formats can change.
+
+For each task:
+
+1. Identify both the service and exact placement; a service can support several incompatible orientations and durations.
+2. Prefer the service's current official publishing, advertising, or creator documentation. Use reputable secondary references only when the official source omits the required parameter, and label that distinction.
+3. Save a small task-local JSON profile containing the verification date, source URLs, orientation (`landscape`, `portrait`, or `square`), aspect ratio, dimensions, frame rate policy, duration range, video and audio codecs, audio channels and sample rate, bitrate or quality policy, and file-size limit when applicable.
+4. Use the same profile to configure the Resolve timeline/render and to validate the exported file.
+5. Fail validation on wrong width, height, orientation, aspect ratio, frame rate, duration, codecs, audio layout, or file size. Report unspecified fields without inventing an official limit.
+
+When a horizontal master must produce vertical or square versions, create separate timelines or renders. Do not rotate a landscape edit or stretch the frame. Reframe shots intentionally and verify title/action safe areas for each placement.
+
 ## Validation
 
 Validation is read-only with respect to Resolve projects:
@@ -87,7 +106,8 @@ Validation is read-only with respect to Resolve projects:
 - compile all Python files;
 - unit-test environment detection and Console-command generation using temporary files;
 - execute the generated command against a fake `resolve` object and a temporary target script;
+- unit-test landscape, portrait, and square delivery profiles, including mismatched dimensions and aspect ratios;
+- run `validate_delivery.py` against generated probe fixtures and one local test render when available;
 - confirm that the reference contains only official URLs and locally observed behavior.
 
 Live project creation and rendering remain an explicit user-approved production action, not part of skill installation tests.
-
