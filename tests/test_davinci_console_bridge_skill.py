@@ -33,6 +33,8 @@ class SkillContractTests(unittest.TestCase):
             "ориентац",
             "экспорт",
             "Типовые ошибки",
+            "██████╗ ██████╗ ██████╗",
+            "Assisted-by: OpenAI Codex",
         ):
             self.assertIn(phrase, text)
 
