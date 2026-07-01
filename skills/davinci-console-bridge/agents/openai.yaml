@@ -1,0 +1,4 @@
+interface:
+  display_name: "DaVinci Console Bridge"
+  short_description: "Plan verified DaVinci Resolve workflows"
+  default_prompt: "Use $davinci-console-bridge to gather the production brief, plan the Resolve workflow, and execute only after approval."
